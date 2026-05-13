@@ -4,8 +4,9 @@ import express, {
   type Response,
 } from "express";
 const app: Application = express();
-const port = 5000;
+const port = config.port;
 import { Pool } from "pg";
+import { config } from "./config";
 
 // Middleware
 app.use(express.json());
@@ -13,8 +14,7 @@ app.use(express.text());
 
 // Connection Database
 const pool = new Pool({
-  connectionString:
-    "postgresql://neondb_owner:npg_5nmGU0uEKiky@ep-tiny-fire-apn6miq4-pooler.c-7.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
+  connectionString: config.connection_string,
 });
 // Create Database:
 const initDB = async () => {
@@ -29,8 +29,7 @@ const initDB = async () => {
         age INT,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
-        )
-        
+        )       
         `);
     console.log("Database connected successfully!");
   } catch (error) {
@@ -47,9 +46,9 @@ app.get("/", (req: Request, res: Response) => {
   });
 });
 
+// Create user
 app.post("/api/users", async (req: Request, res: Response) => {
   const { name, email, password, age } = req.body;
-
   try {
     const result = await pool.query(
       ` 
@@ -65,7 +64,122 @@ app.post("/api/users", async (req: Request, res: Response) => {
   } catch (error: any) {
     res.status(500).json({
       message: error.message,
-      data: error,
+      error: error,
+    });
+  }
+});
+
+// Get all users:
+app.get("/api/users", async (req: Request, res: Response) => {
+  try {
+    const result = await pool.query(`
+        select * from users
+        `);
+    res.status(200).json({
+      success: true,
+      message: "Users retrieved  successfully",
+      data: result.rows,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+      error: error,
+    });
+  }
+});
+
+// Get single user
+app.get("/api/users/:id", async (req: Request, res: Response) => {
+  const { id } = req.params;
+  console.log(id);
+
+  try {
+    const result = await pool.query(
+      `
+          select * from users where id=$1
+          `,
+      [id],
+    );
+    if (result.rows.length === 0) {
+      res.status(404).json({
+        success: false,
+        message: "No user found!",
+      });
+    }
+    res.status(200).json({
+      success: true,
+      message: "User retrieved  successfully",
+      data: result.rows[0],
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+      error: error,
+    });
+  }
+});
+
+// Update user
+app.put("/api/users/:id", async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { name, password, age, is_active } = req.body;
+  try {
+    const result = await pool.query(
+      `
+        update users 
+        set 
+        name = COALESCE($1,name),
+        password=COALESCE($2,password),
+        age=COALESCE($3,age),
+        is_active=COALESCE($4,is_active)
+            
+        where id=$5 returning *
+        `,
+      [name, password, age, is_active, id],
+    );
+    if (result.rows.length === 0) {
+      res.status(404).json({
+        success: false,
+        message: "No user found!",
+      });
+    }
+    res.status(200).json({
+      success: true,
+      message: "User updated successfully",
+      data: result.rows,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+      error: error,
+    });
+  }
+});
+
+// Delete user:
+app.delete("/api/users/:id", async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query(`delete from users where id=$1`, [id]);
+    if (result.rowCount === 0) {
+      res.status(404).json({
+        success: false,
+        message: "No user found!",
+      });
+    }
+    res.status(200).json({
+      success: true,
+      message: "User deleted successfully",
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+      error: error,
     });
   }
 });
