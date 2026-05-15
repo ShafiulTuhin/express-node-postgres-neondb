@@ -3,10 +3,11 @@ import express, {
   type Request,
   type Response,
 } from "express";
+import { Pool } from "pg";
+import config from "./config";
+
 const app: Application = express();
 const port = config.port;
-import { Pool } from "pg";
-import { config } from "./config";
 
 // Middleware
 app.use(express.json());
@@ -16,6 +17,7 @@ app.use(express.text());
 const pool = new Pool({
   connectionString: config.connection_string,
 });
+
 // Create Database:
 const initDB = async () => {
   try {
