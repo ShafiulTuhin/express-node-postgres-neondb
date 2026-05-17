@@ -5,12 +5,14 @@ import express, {
 } from "express";
 
 import { userRoute } from "./modules/user/user.route";
+import { userProfile } from "./modules/profile/profile.route";
 
 const app: Application = express();
 
 // Middleware
 app.use(express.json());
 app.use(express.text());
+app.use(express.urlencoded({ extended: true }));
 
 app.get("/", (req: Request, res: Response) => {
   res.status(200).json({
@@ -20,5 +22,6 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 app.use("/api/users", userRoute);
+app.use("/api/profile", userProfile);
 
 export default app;
